@@ -7,7 +7,7 @@ from database import init_db
 # Initialize setup
 init_db()
 
-st.set_page_config(page_title="Neurological Database", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="Neurological Database", page_icon="🎃", layout="wide")
 st.title("Neurological Symptom Analysis Database")
 
 menu = [
