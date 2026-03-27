@@ -3,3 +3,6 @@ pandas
 plotly
 pymongo
 python-dotenv
+fastapi
+uvicorn
+# 

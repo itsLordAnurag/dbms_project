@@ -31,9 +31,21 @@ def get_patients():
 # --- Symptom Operations ---
 def add_symptom(patient_id, symptom_type, severity, description):
     db = get_db()
+    
+    # Automated Classification System
+    category_map = {
+        "Headache": "Pain / General",
+        "Seizure": "Cortical / Electrical",
+        "Weakness": "Motor",
+        "Numbness": "Sensory",
+        "Vision changes": "Cranial Nerve"
+    }
+    category = category_map.get(symptom_type, "Unclassified / Other")
+    
     db.symptoms.insert_one({
         "PatientID": str(patient_id),
         "SymptomType": symptom_type,
+        "Category": category,
         "Severity": severity,
         "Description": description,
         "RecordedAt": datetime.now()
@@ -151,3 +163,40 @@ def get_critical_patients():
     cursor = db.gcs_scores.aggregate(pipeline)
     df = pd.DataFrame(list(cursor))
     return df
+
+def calculate_localization(symptoms_list):
+    """
+    Heuristic algorithm to predict neuroanatomical region based on a list of symptoms.
+    Returns: (predicted_region, confidence_score_percentage)
+    """
+    regions = {
+        "Brain (Cerebrum)": 0,
+        "Cerebellum": 0,
+        "Brainstem": 0,
+        "Spinal Cord": 0,
+        "Peripheral Nerve": 0
+    }
+    
+    for symptom in symptoms_list:
+        symptom = str(symptom).lower()
+        if any(word in symptom for word in ["seizure", "speech", "cognitive", "headache", "confusion"]):
+            regions["Brain (Cerebrum)"] += 5
+        elif "weakness" in symptom:
+            regions["Brain (Cerebrum)"] += 2
+            regions["Spinal Cord"] += 2
+        elif any(word in symptom for word in ["tremor", "imbalance", "coordination", "dizziness"]):
+            regions["Cerebellum"] += 5
+        elif "vision" in symptom:
+            regions["Brain (Cerebrum)"] += 2
+            regions["Brainstem"] += 3
+        elif "numbness" in symptom or "tingling" in symptom:
+            regions["Spinal Cord"] += 3
+            regions["Peripheral Nerve"] += 4
+
+    best_match = max(regions, key=regions.get)
+    highest_score = regions[best_match]
+    
+    total_points = sum(regions.values())
+    confidence = (highest_score / total_points * 100) if total_points > 0 else 0
+    
+    return best_match, round(confidence, 2)
