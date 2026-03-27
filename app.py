@@ -2,8 +2,14 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+import os
+from dotenv import load_dotenv
 
-API_URL = "http://127.0.0.1:8000"
+# Load environment variables from .env
+load_dotenv()
+
+# Extract the loaded variable into a Python variable so the rest of the code can use it
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000") # defaults to localhost if missing
 
 st.set_page_config(page_title="Neurological Database", page_icon="🎃", layout="wide")
 st.title("Neurological Symptom Analysis Database")
