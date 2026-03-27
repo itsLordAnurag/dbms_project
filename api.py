@@ -137,3 +137,29 @@ def get_critical_patients():
         return df.to_dict(orient="records") if not df.empty else []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/localization/auto/{patient_id}")
+def auto_run_localization(patient_id: str):
+    try:
+        df = models.get_symptoms(patient_id)
+        if df.empty:
+            return {"status": "error", "message": "No symptoms found for this patient. Please log symptoms first."}
+        
+        symptoms_list = df['SymptomType'].tolist()
+        if 'Description' in df.columns:
+            symptoms_list += df['Description'].tolist()
+            
+        symptoms_str_list = [str(x) for x in symptoms_list if x and str(x).strip() and str(x) != 'nan']
+        
+        if symptoms_str_list:
+            region, confidence = models.calculate_localization(symptoms_str_list)
+            if confidence > 0:
+                models.add_localization(patient_id, region, "Automated finding based on symptoms.", "Clinical Heuristics", confidence)
+                return {"status": "success", "region": region, "confidence": confidence}
+            else:
+                return {"status": "error", "message": "Not enough specific symptom data to run the algorithm. Please log more detailed symptoms."}
+        else:
+            return {"status": "error", "message": "Symptom details are empty."}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

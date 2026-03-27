@@ -207,20 +207,18 @@ elif choice == "Neurological Localization":
             st.subheader("Automated Localization Algorithm")
             st.write("Run the Clinical Heuristics Algorithm based on the patient's recorded symptoms.")
             if st.button("Run Diagnostic Algorithm"):
-                symptoms_df = models.get_symptoms(patient_id)
-                if not symptoms_df.empty:
-                    symptoms_list = symptoms_df['SymptomType'].tolist() + symptoms_df['Description'].tolist()
-                    symptoms_str_list = [str(x) for x in symptoms_list if x and str(x).strip() and str(x) != 'nan']
-                    
-                    if symptoms_str_list:
-                        region, confidence = models.calculate_localization(symptoms_str_list)
-                        if confidence > 0:
-                            models.add_localization(patient_id, region, "Automated finding based on symptoms.", "Clinical Heuristics", confidence)
-                            st.success(f"Algorithm Complete & Saved! Predicted Region: **{region}** (Confidence: {confidence}%)")
+                try:
+                    res = requests.post(f"{API_URL}/localization/auto/{patient_id}")
+                    if res.status_code == 200:
+                        data = res.json()
+                        if data.get("status") == "success":
+                            st.success(f"Algorithm Complete & Saved! Predicted Region: **{data['region']}** (Confidence: {data['confidence']}%)")
                         else:
-                            st.warning("Not enough specific symptom data to run the algorithm. Please log more detailed symptoms.")
-                else:
-                    st.warning("No symptoms found for this patient. Please log symptoms first.")
+                            st.warning(data.get("message"))
+                    else:
+                        st.error(f"API Error {res.status_code}: {res.text}")
+                except requests.exceptions.ConnectionError:
+                    st.error("Could not connect to the Backend API. Make sure FastAPI is running on port 8000.")
                     
             st.markdown("---")
             st.subheader("Manual Localization Entry")
